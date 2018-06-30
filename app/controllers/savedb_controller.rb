@@ -90,7 +90,7 @@ class SavedbController < ApplicationController
         
         data["dailyScheduleListMap"].each do |date, game|
             game.each do |g|
-                if g["phaseName"].eql? "조별예선"
+                if not g["phaseName"].eql? "조별예선"
                     title = "#{g["tournamentGameText"]} #{g["homeTeamName"]} vs #{g["awayTeamName"]}"
                     Game.create(title: title, home: g["homeTeamName"], away: g["awayTeamName"],\
                                 game_date: g["gameStartDate"], game_time: g["gameStartTime"], game_state: g["gameStatus"])

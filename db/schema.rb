@@ -42,7 +42,7 @@ ActiveRecord::Schema.define(version: 20180621171139) do
     t.integer  "f_as",       limit: 4
     t.boolean  "ispredict"
     t.integer  "get_point",  limit: 4,   default: 0
-    t.integer  "get_alpha",  limit: 4
+    t.integer  "get_alpha",  limit: 4,   default: 0
     t.integer  "corr_count", limit: 4,   default: 0
     t.boolean  "isapply"
     t.datetime "created_at",                         null: false

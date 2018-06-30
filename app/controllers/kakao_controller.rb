@@ -31,6 +31,7 @@ class KakaoController < ApplicationController
     
     FUNC_STEP_HOME        = "[ 처음으로 가기 ]"
     FUNC_STEP_SAVE        = "저장중"
+    FUNC_STEP_CONFIRM     = "확인하고 가실게요."
     
     DEFAULT_MESSAGE       = "(아잉)\n\"안녕하세요. 월드컵알리미 입니다.\""
     DEFAULT_MYTEAM_MSG    = "(우와)\n\"어디 한번 골라 볼까용?\"" 
@@ -47,7 +48,7 @@ class KakaoController < ApplicationController
     NEXT_STEP_GUESS_AWAY = 1
     NEXT_STEP_GUESS_CALC = 2
     
-    @@main_menu = [MENU_STEP_BATTING, MENU_STEP_MYTEAM, MENU_STEP_INFO, MENU_STEP_HIGHLIGHT, MENU_STEP_NEWS, MENU_STEP_RANKING]
+    @@main_menu = [MENU_STEP_BATTING, MENU_STEP_INFO, MENU_STEP_HIGHLIGHT, MENU_STEP_NEWS]
 
     def keyboard
         msg, keyboard = init_state("init_state")
@@ -363,26 +364,24 @@ class KakaoController < ApplicationController
         schedule = Array.new
         ttl_sch = jm_sch.schedule["dailyScheduleListMap"]
         
-        today_info = ttl_sch[date]
-        tomor_info = ttl_sch[tomorrow]
+        game_list = Array.new
+        game_list.push(ttl_sch[date]) if not ttl_sch[date].nil?
+        game_list.push(ttl_sch[tomorrow]) if not ttl_sch[tomorrow].nil?
+        game_list = game_list.flatten(1)
 
         if time < "05:00"
-            today_info.each do |t|
+            game_list.each do |t|
                 schedule.push(t)
             end
         else
-            today_info.each do |t|
-                if t["gameStartTime"] > "05:00"
-                    schedule.push(t)
-                end
-            end
-            
-            tomor_info.each do |t|
-                if t["gameStartTime"] < "05:00"
+            game_list.each do |t|
+                if (t["gameStartTime"] > "05:00" and t["gameStartDate"].eql? date) or 
+                    ( t["gameStartTime"] < "05:00" and t["gameStartDate"].eql? tomorrow)
                     schedule.push(t)
                 end
             end
         end
+        
         temp_text = ["(굿) \"오늘의 경기 일정~Yo!\"\n"]
         schedule.each do |g|
         
@@ -769,22 +768,36 @@ class KakaoController < ApplicationController
 # ap "set nickname>>>"        
 # ap fstep
 # ap user_msg
-        if user_msg == "홈" or user_msg == "이전"
+        if user_msg == "홈" or user_msg == "이전" or user_msg == "취소" or user_msg == "메뉴로 갈래요."
             tmp_msg, tmp_key = init_state(user_key)
         else
+            if user_msg == "저장 할게염"
+                fstep = FUNC_STEP_SAVE
+            elsif user_msg == "아뇨 다시 설정할래요."
+                fstep = FUNC_STEP_INIT
+            end
+            
             if fstep.eql? FUNC_STEP_INIT
-                tmp_msg = "별명을 먼저 설정하고 가시겠습니다."
+                tmp_msg = "별명을 설정하고 가시겠습니다. 원하는 별명을 입력해 주세요."
                 tmp_key = @@key.getTextKey
-                @@user[user_key][:fstep].push(FUNC_STEP_SAVE)
-            elsif fstep.eql? FUNC_STEP_SAVE
+                @@user[user_key][:fstep].push(FUNC_STEP_CONFIRM)
+            elsif fstep.eql? FUNC_STEP_CONFIRM
+            
                 if user.where(nick: user_msg).exists?
                     tmp_msg = "이미 있는 별명입니다."
                     tmp_key = @@key.getTextKey
                 else
-                    user.find_by(user_key: user_key).update(nick: user_msg)
-                    tmp_msg = "#{user_msg} 로 별명이 설정되었습니다."
-                    tmp_key = @@key.getBtnKey(menu)
+                    tmp_msg = "#{user_msg}으로 저장 하시겠습니까?"
+                    @@user[user_key][:nick] = user_msg
+                    btn = ["저장 할게염","아뇨 다시 설정할래요.", "메뉴로 갈래요."]
+                    tmp_key = @@key.getBtnKey(btn)
                 end
+            elsif fstep.eql? FUNC_STEP_SAVE
+                
+                user.find_by(user_key: user_key).update(nick: @@user[user_key][:nick])
+                tmp_msg = "#{@@user[user_key][:nick]} 로 별명이 설정되었습니다."
+                tmp_key = @@key.getBtnKey(menu)
+            
             else
                 # 잘못 누른 경우.
                 
